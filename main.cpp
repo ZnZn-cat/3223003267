@@ -35,7 +35,7 @@ size_t lcs_length(const wchar_t *X, const wchar_t *Y, size_t m, size_t n) {
     return result;
 }
 
-int main(){
+int main(int argc, char *argv[]){
     if (argc != 4) {
         printf("Usage: %s original_file plagiarized_file output_file\n", argv[0]);
         return 1;
@@ -140,7 +140,4 @@ int main(){
     free(plag_wide);
 
     return 0;
-}
-
-
 }
