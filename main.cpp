@@ -66,6 +66,81 @@ int main(){
     size_t read_size = fread(orig_text, 1, orig_size, orig_file);
     orig_text[read_size] = '\0';
     fclose(orig_file);
+    // 读取抄袭版文件
+    FILE *plag_file = fopen(plag_path, "rb");
+    if (plag_file == NULL) {
+        perror("Failed to open plagiarized file");
+        free(orig_text);
+        return 1;
+    }
+    fseek(plag_file, 0, SEEK_END);
+    long plag_size = ftell(plag_file);
+    fseek(plag_file, 0, SEEK_SET);
+    char *plag_text = (char *)malloc(plag_size + 1);
+    if (plag_text == NULL) {
+        perror("malloc");
+        fclose(plag_file);
+        free(orig_text);
+        return 1;
+    }
+    read_size = fread(plag_text, 1, plag_size, plag_file);
+    plag_text[read_size] = '\0';
+    fclose(plag_file);
+
+    // 转换多字节字符串为宽字符串
+    size_t orig_wide_len = mbstowcs(NULL, orig_text, 0);
+    size_t plag_wide_len = mbstowcs(NULL, plag_text, 0);
+    if (orig_wide_len == (size_t)-1 || plag_wide_len == (size_t)-1) {
+        perror("mbstowcs failed");
+        free(orig_text);
+        free(plag_text);
+        return 1;
+    }
+    wchar_t *orig_wide = (wchar_t *)malloc((orig_wide_len + 1) * sizeof(wchar_t));
+    wchar_t *plag_wide = (wchar_t *)malloc((plag_wide_len + 1) * sizeof(wchar_t));
+    if (orig_wide == NULL || plag_wide == NULL) {
+        perror("malloc wide string");
+        free(orig_text);
+        free(plag_text);
+        if (orig_wide) free(orig_wide);
+        if (plag_wide) free(plag_wide);
+        return 1;
+    }
+    mbstowcs(orig_wide, orig_text, orig_wide_len + 1);
+    mbstowcs(plag_wide, plag_text, plag_wide_len + 1);
+
+    // 计算LCS长度
+    size_t lcs_len = lcs_length(orig_wide, plag_wide, orig_wide_len, plag_wide_len);
+
+    // 计算重复率
+    double rate;
+    if (orig_wide_len == 0) {
+        rate = 0.0;
+    } else {
+        rate = (double)lcs_len / orig_wide_len;
+    }
+
+    // 输出重复率到文件
+    FILE *output_file = fopen(output_path, "w");
+    if (output_file == NULL) {
+        perror("Failed to open output file");
+        free(orig_text);
+        free(plag_text);
+        free(orig_wide);
+        free(plag_wide);
+        return 1;
+    }
+    fprintf(output_file, "%.2f", rate);
+    fclose(output_file);
+
+    // 释放内存
+    free(orig_text);
+    free(plag_text);
+    free(orig_wide);
+    free(plag_wide);
+
+    return 0;
+}
 
 
 }
