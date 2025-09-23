@@ -36,6 +36,36 @@ size_t lcs_length(const wchar_t *X, const wchar_t *Y, size_t m, size_t n) {
 }
 
 int main(){
+    if (argc != 4) {
+        printf("Usage: %s original_file plagiarized_file output_file\n", argv[0]);
+        return 1;
+    }
 
-    
+    const char *orig_path = argv[1];
+    const char *plag_path = argv[2];
+    const char *output_path = argv[3];
+
+    // 设置locale以支持UTF-8
+    setlocale(LC_ALL, "en_US.UTF-8");
+
+    // 读取原文文件
+    FILE *orig_file = fopen(orig_path, "rb");
+    if (orig_file == NULL) {
+        perror("Failed to open original file");
+        return 1;
+    }
+    fseek(orig_file, 0, SEEK_END);
+    long orig_size = ftell(orig_file);
+    fseek(orig_file, 0, SEEK_SET);
+    char *orig_text = (char *)malloc(orig_size + 1);
+    if (orig_text == NULL) {
+        perror("malloc");
+        fclose(orig_file);
+        return 1;
+    }
+    size_t read_size = fread(orig_text, 1, orig_size, orig_file);
+    orig_text[read_size] = '\0';
+    fclose(orig_file);
+
+
 }
