@@ -94,3 +94,106 @@ def evaluate_expression(expression) -> Fraction:
     if op == '÷':
         # 除数不为0已经在生成时保证
         return left_val / right_val
+
+
+def generate_expression_tree(max_ops: int, max_range: int):
+    """
+    递归生成一个符合所有约束的表达式树。
+    - 树的结构为 (left_child, operator, right_child)
+    - 叶子节点为 Fraction 对象
+
+    Args:
+        max_ops: 该子树中允许的最大操作符数量。
+        max_range: 操作数的数值范围。
+
+    Returns:
+        生成的表达式树。
+    """
+    # 基准情况：如果没有剩余操作符，则返回一个操作数
+    if max_ops == 0:
+        return create_operand(max_range)
+
+    # 为了生成不同复杂度的表达式，有一定概率提前终止递归，直接生成操作数
+    if max_ops > 0 and random.random() < 0.4:
+        return create_operand(max_range)
+
+    # 随机选择一个操作符
+    ops = ['+', '-', '×', '÷']
+    op = random.choice(ops)
+
+    # 随机分配剩余的操作符数量给左、右子树
+    remaining_ops = max_ops - 1
+    left_ops = random.randint(0, remaining_ops)
+    right_ops = remaining_ops - left_ops
+
+    # 循环直到生成一个满足所有条件的有效子树
+    while True:
+        # 递归生成左右子树
+        left_child = generate_expression_tree(left_ops, max_range)
+        right_child = generate_expression_tree(right_ops, max_range)
+
+        # 计算左右子树的值，用于检查约束
+        left_val = evaluate_expression(left_child)
+        right_val = evaluate_expression(right_child)
+
+        # 应用题目约束: 减法结果不能是负数
+        if op == '-' and left_val < right_val:
+            # 如果不满足条件，则交换左右子节点（这是一个简化处理，也可以选择重新生成）
+            left_child, right_child = right_child, left_child
+            left_val, right_val = right_val, left_val
+
+        # 应用题目约束: 除法结果必须是真分数
+        if op == '÷':
+            # 约束1：除数不能为0
+            if right_val == 0:
+                continue  # 重新生成
+            # 约束2：结果是真分数，意味着被除数必须小于除数
+            if left_val >= right_val:
+                continue  # 重新生成
+
+        # 如果所有约束都满足，返回生成的子树
+        return (left_child, op, right_child)
+
+
+# --- 查重与格式化 ---
+
+def get_precedence(op):
+    """获取运算符的优先级，用于决定是否加括号。"""
+    if op in ['+', '-']:
+        return 1  # 加减法优先级低
+    if op in ['×', '÷']:
+        return 2  # 乘除法优先级高
+    return 0  # 数字没有优先级
+
+
+def expression_to_string(expression, parent_precedence=0) -> str:
+    """
+    通过中序遍历将表达式树转换为带必要括号的字符串。
+
+    Args:
+        expression: 表达式树。
+        parent_precedence: 父节点的运算符优先级。
+
+    Returns:
+        格式化后的表达式字符串。
+    """
+    # 基准情况：如果是操作数，直接格式化并返回
+    if isinstance(expression, Fraction):
+        return format_fraction(expression)
+
+    # 递归步骤：解构表达式树节点
+    left, op, right = expression
+    current_precedence = get_precedence(op)
+
+    # 递归转换左右子树为字符串
+    left_str = expression_to_string(left, current_precedence)
+    right_str = expression_to_string(right, current_precedence)
+
+    # 决定是否需要加括号：
+    # 如果当前运算符的优先级低于父运算符，则必须加括号以保证运算顺序。
+    # 例如，在 (1+2)*3 中，+ 的优先级低于 *，所以 1+2 需要被括号括起来。
+    if current_precedence < parent_precedence:
+        return f"({left_str} {op} {right_str})"
+
+    # 默认情况下不加括号
+    return f"{left_str} {op} {right_str}"
